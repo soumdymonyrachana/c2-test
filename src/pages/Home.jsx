@@ -1,171 +1,113 @@
-import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
-import products from "../assets/data/products.json";
+import { Link } from "react-router-dom";
 
-export default function Home() {
-  const items = products;
-
-  // Featured: first 4 items
-  const featured = items.slice(0, 4);
-
-  const [categories, setCategories] = useState([]);
+export default function Products() {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const limit = 12;
 
   useEffect(() => {
-    fetch("/categories")
-      .then((res) => res.json())
-      .then((data) => setCategories(data))
-      .catch((error) => console.error("Error fetching categories:", error));
-  }, []);
-
-  // Latest: sort by creationAt desc, take 4
-  const latest = [...items]
-    .sort(
-      (a, b) =>
-        new Date(b.creationAt).getTime() - new Date(a.creationAt).getTime()
-    )
-    .slice(0, 4);
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const offset = (page - 1) * limit;
+        const response = await fetch(
+          `https://api.escuelajs.co/api/v1/products?offset=${offset}&limit=${limit}`
+        );
+        const data = await response.json();
+        setItems((prev) => [...prev, ...data]);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, [page]);
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-8">
-        {/* Hero Section */}
-        <section className="rounded-2xl border bg-white p-5">
-          <div className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-            New arrivals
-          </div>
+    <div className="max-w-7xl mx-auto p-4 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Products</h1>
+          <p className="text-sm text-slate-500">Manage your product catalog</p>
+        </div>
+        <Link
+          to="/products/new"
+          className="inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+        >
+          + Add product
+        </Link>
+      </div>
 
-          <h1 className="mt-3 text-2xl font-semibold leading-tight">
-            Discover products you’ll love
-          </h1>
+      {/* Grid: 1 column on mobile, 2 on medium, etc. */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {items.map((p) => (
+          <Link
+            key={p.id}
+            to={`/products/${p.id}`}
+            className="group flex flex-row md:flex-col overflow-hidden rounded-xl border bg-white p-3 hover:shadow-md transition-all"
+          >
+            {/* Image: Fixed size on small, full width on medium+ */}
+            <div className="h-24 w-24 shrink-0 overflow-hidden rounded-lg md:h-48 md:w-full">
+              <img
+                src={p.images?.[0] ?? "https://placehold.co/600x400"}
+                alt={p.title}
+                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                loading="lazy"
+              />
+            </div>
 
-          <p className="mt-2 text-sm text-slate-600">
-            Browse categories, view latest items, and manage products & users in
-            one simple app.
-          </p>
-
-          <div className="mt-4 flex gap-3">
-            <Link
-              to="/products"
-              className="inline-flex flex-1 items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
-            >
-              Explore products
-            </Link>
-          </div>
-        </section>
-
-        {/* Featured Products */}
-        <section className="space-y-3">
-          <div className="flex items-end justify-between">
-            <h2 className="text-lg font-semibold">Featured products</h2>
-            <Link to="/products" className="text-sm text-slate-700 underline">
-              View all
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {featured.map((p) => (
-              <Link
-                key={p.id}
-                to={`/products/${p.id}`}
-                className="group rounded-2xl border bg-white overflow-hidden hover:shadow-sm transition"
-              >
-                {/* Image */}
-                <div className="aspect-[4/3] bg-slate-100">
-                  <img
-                    src={p.images?.[0] ?? "https://placehold.co/600x400"}
-                    alt={p.title}
-                    className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
-                </div>
-
-                {/* Content */}
-                <div className="p-4 space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-medium leading-snug line-clamp-2">
-                      {p.title}
-                    </h3>
-                    <span className="shrink-0 font-semibold">${p.price}</span>
-                  </div>
-
-                  <div className="text-xs text-slate-500 truncate">
+            {/* Content: Flex-1 to fill space on small screens */}
+            <div className="flex flex-1 flex-col px-3 md:px-0 md:mt-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-slate-900 line-clamp-1 md:text-base">
+                    {p.title}
+                  </h3>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     {p.category?.name}
-                  </div>
-
-                  <p className="text-sm text-slate-600 line-clamp-2">
-                    {p.description}
                   </p>
                 </div>
-              </Link>
-            ))}
-          </div>
-        </section>
+                <span className="text-sm font-bold text-slate-900 md:text-base">
+                  ${p.price}
+                </span>
+              </div>
 
-        {/* Categories */}
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold">Categories</h2>
+              <p className="mt-1 text-xs text-slate-600 line-clamp-2 leading-relaxed md:mt-2 md:text-sm">
+                {p.description}
+              </p>
+            </div>
+          </Link>
+        ))}
 
-          <div className="space-y-3">
-            {categories.map((c) => (
-              <Link
-                key={c.id}
-                to="/products"
-                className="flex items-center gap-3 rounded-2xl border bg-white p-4 hover:bg-slate-50 transition"
-              >
-                <img
-                  src={c.image}
-                  alt={c.name}
-                  className="h-12 w-12 rounded-xl object-cover"
-                  loading="lazy"
-                />
-                <div className="min-w-0">
-                  <div className="truncate font-medium">{c.name}</div>
-                  <div className="text-xs text-slate-600">Tap to browse</div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
+        {/* Skeleton Loader to match the new layout */}
+        {loading &&
+          Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="flex flex-row md:flex-col animate-pulse rounded-xl border p-3 gap-3"
+            >
+              <div className="h-24 w-24 rounded-lg bg-slate-200 md:h-48 md:w-full" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-3/4 rounded bg-slate-200" />
+                <div className="h-3 w-full rounded bg-slate-200" />
+              </div>
+            </div>
+          ))}
+      </div>
 
-        {/* Latest Products */}
-        <section className="space-y-3">
-          <div className="flex items-end justify-between">
-            <h2 className="text-lg font-semibold">Latest products</h2>
-            <Link to="/products" className="text-sm text-slate-700 underline">
-              View all
-            </Link>
-          </div>
-
-          <div className="space-y-3">
-            {latest.map((p) => (
-              <Link
-                key={p.id}
-                to={`/products/${p.id}`}
-                className="block rounded-2xl border bg-white p-4 hover:shadow-sm transition"
-              >
-                <div className="flex items-center gap-3">
-                  <img
-                    src={p.images?.[0] ?? "https://placehold.co/600x400"}
-                    alt={p.title}
-                    className="h-14 w-14 rounded-xl object-cover"
-                    loading="lazy"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="truncate font-medium">{p.title}</div>
-                      <div className="shrink-0 text-sm font-semibold">
-                        ${p.price}
-                      </div>
-                    </div>
-                    <div className="truncate text-xs text-slate-600">
-                      {p.category?.name}
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
+      {/* Load More Button */}
+      <div className="flex flex-col items-center justify-center pt-8 border-t border-slate-100">
+        <button
+          onClick={() => setPage((prev) => prev + 1)}
+          disabled={loading}
+          className="rounded-full border border-slate-300 bg-white px-8 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+        >
+          {loading ? "Loading..." : "Load More"}
+        </button>
       </div>
     </div>
   );
